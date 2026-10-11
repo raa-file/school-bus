@@ -374,15 +374,6 @@ function settingsView(){
     <div class="field"><label>الرقم السري للمشرفة الرئيسية</label><input id="sPinH" value="${esc(state.settings.pins.head)}"></div>
     <div class="field"><label>الرقم السري لإدارة المدرسة</label><input id="sPinA" value="${esc(state.settings.pins.admin)}"></div>
     <button class="btn pri" data-act="saveset">حفظ</button></div>
-  <div class="card"><h3>المزامنة بين الأجهزة</h3>
-    <p class="note">لتظهر البيانات عند إدارة المدرسة من جهاز آخر، أدخلي بيانات مشروع Supabase. بدونها تعمل المنصة على هذا المتصفح فقط.</p>
-    <div class="field"><label>رابط المشروع</label><input id="sbUrl" dir="ltr" placeholder="https://xxxx.supabase.co" value="${esc(c.url||'')}"></div>
-    <div class="field"><label>المفتاح العام (anon key)</label><input id="sbKey" dir="ltr" value="${esc(c.key||'')}"></div>
-    <button class="btn pri" data-act="savesb">حفظ وتفعيل</button>
-    <p class="note">نفّذي هذا مرة واحدة في SQL Editor:</p>
-<pre>create table app_state (id text primary key, data jsonb);
-alter table app_state enable row level security;
-create policy "all" on app_state for all using (true) with check (true);</pre></div>
   <div class="card"><h3>نسخة احتياطية</h3><div class="row"><button class="btn" data-act="backup">تنزيل نسخة</button><button class="btn" data-act="restore">استرجاع نسخة</button></div></div>
   <div class="card"><h3>بيانات</h3><div class="row"><button class="btn" data-act="demo">تحميل بيانات تجريبية</button><button class="btn danger" data-act="reset">مسح كل البيانات</button></div></div></div>`;
 }
