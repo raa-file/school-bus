@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>منصة النقل المدرسي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#14213d; --ink2:#5b6478; --line:#e3e7ee; --bg:#f5f7fa; --card:#fff;
+  --bus:#f7b801; --busink:#1a1400;
+  --ok:#1f9d63; --okbg:#e6f6ee; --bad:#d6403a; --badbg:#fdeceb; --late:#e08a00; --latebg:#fff3dc;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'IBM Plex Sans Arabic',Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--bus);outline-offset:2px}
+.topbar{background:var(--ink);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 20px;flex-wrap:wrap}
+.topbar .brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:10px}
+.plate{background:var(--bus);color:var(--busink);font-weight:700;border-radius:8px;padding:0 10px;min-width:38px;text-align:center;display:inline-block;line-height:32px;border:2px solid var(--busink)}
+.topbar .sp{flex:1}
+.role{font-size:13px;opacity:.8}
+.dot{width:9px;height:9px;border-radius:50%;background:#7e8aa3;display:inline-block;margin-inline-end:6px}
+.dot.ok{background:#3ddc97}.dot.err{background:#ff6b6b}
+.tabs{background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;padding:0 14px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:14px 14px;font-weight:500;color:var(--ink2);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--bus);font-weight:700}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+h2{margin:0 0 14px;font-size:22px}
+h3{margin:0 0 10px;font-size:17px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;gap:14px}
+.g-buses{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.g-kpi{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.bus{cursor:pointer;text-align:start;display:block;width:100%;transition:border-color .15s}
+.bus:hover{border-color:var(--ink)}
+.bus .plate{font-size:22px;line-height:44px;padding:0 16px;margin-bottom:10px}
+.bus .sup{font-weight:600}
+.bus .meta{color:var(--ink2);font-size:13px}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.kpi .n{font-size:30px;font-weight:700;line-height:1.2}
+.kpi .l{color:var(--ink2);font-size:13px}
+.kpi.ok .n{color:var(--ok)}.kpi.bad .n{color:var(--bad)}.kpi.late .n{color:var(--late)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.sb{justify-content:space-between}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.bus{background:var(--bus);color:var(--busink);border-color:var(--busink);font-weight:700;display:inline-block;width:auto;padding:8px 14px}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:4px 10px;font-size:13px}
+input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;width:100%}
+.inline input,.inline select{width:auto}
+label{display:block;font-size:13px;color:var(--ink2);margin-bottom:4px}
+.field{margin-bottom:12px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:8px 16px;font-weight:500;border-inline-start:1px solid var(--line)}
+.seg button:first-child{border-inline-start:0}
+.seg button.on{background:var(--ink);color:#fff}
+.stu{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.stu:last-child{border:0}
+.stu .nm{flex:1;min-width:170px}
+.stu .nm b{display:block}
+.stu .nm span{color:var(--ink2);font-size:13px}
+.stu a{color:var(--ink);text-decoration:none;font-size:14px;direction:ltr;unicode-bidi:embed}
+.mk{display:flex;gap:6px}
+.mk button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 14px;font-weight:600;min-width:72px}
+.mk button.P.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.mk button.A.on{background:var(--bad);color:#fff;border-color:var(--bad)}
+.mk button.L.on{background:var(--late);color:#fff;border-color:var(--late)}
+.mk button:disabled{opacity:.6;cursor:default}
+.chip{display:inline-block;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:600}
+.chip.P{background:var(--okbg);color:var(--ok)}.chip.A{background:var(--badbg);color:var(--bad)}.chip.L{background:var(--latebg);color:var(--late)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;font-size:14px}
+th{background:#f0f3f8;font-weight:600}
+.scroll{overflow-x:auto}
+.toast{position:fixed;bottom:20px;inset-inline-start:20px;background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+.toast.show{opacity:1}
+#modal{position:fixed;inset:0;background:rgba(20,33,61,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
+#modal.open{display:flex}
+#modal .box{background:#fff;border-radius:var(--r);padding:20px;width:100%;max-width:460px;max-height:90vh;overflow:auto}
+.login{max-width:380px;margin:9vh auto;padding:0 16px}
+.login .roles{display:grid;gap:10px;margin:18px 0}
+.login .roles button{padding:16px;border-radius:12px;border:1px solid var(--line);background:#fff;text-align:start;font-weight:600}
+.login .roles button.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.empty{color:var(--ink2);text-align:center;padding:28px}
+.sheet{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px}
+.sheet h1{font-size:22px;margin:0 0 4px}
+.sheet h4{margin:20px 0 8px;font-size:16px}
+.sheet table th,.sheet table td{border:1px solid #bfc6d4}
+.note{font-size:13px;color:var(--ink2)}
+pre{background:#f0f3f8;padding:10px;border-radius:8px;overflow:auto;direction:ltr;text-align:left;font-size:12px}
+@media print{
+  body{background:#fff}
+  .no-print,.topbar,.tabs,.toast,#modal{display:none!important}
+  main{max-width:none;padding:0}
+  .sheet{border:0;padding:0}
+  .card{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== أدوات عامة ===================== */
+const KEY='schoolbus_state_v1', CFGKEY='schoolbus_sb';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const pad=n=>String(n).padStart(2,'0');
+const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const today=()=>fmt(new Date());
+const arDate=s=>parseD(s).toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const ST={P:'حاضر',A:'غائب',L:'متأخر'};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+
+/* ===================== البيانات ===================== */
+function defaultState(){
+  return {updated:0,
+    settings:{school:'اسم المدرسة',pins:{head:'1234',admin:'4321'}},
+    buses:Array.from({length:10},(_,i)=>({id:uid(),number:String(i+1),supervisor:'',supPhone:''})),
+    students:[],attendance:{}};
+}
+let state=load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.buses)return s}catch(e){}return defaultState()}
+const bc=('BroadcastChannel' in window)?new BroadcastChannel('schoolbus'):null;
+let sync={ok:null,msg:'محلي'};
+function save(){
+  state.updated=Date.now();
+  localStorage.setItem(KEY,JSON.stringify(state));
+  bc&&bc.postMessage('u');
+  sbPush();
+}
+window.addEventListener('storage',e=>{if(e.key===KEY){state=load();softRender()}});
+bc&&(bc.onmessage=()=>{state=load();softRender()});
+
+/* مزامنة اختيارية عبر Supabase لتظهر البيانات عند الإدارة من أي جهاز */
+const cfg=()=>{try{return JSON.parse(localStorage.getItem(CFGKEY))||null}catch(e){return null}};
+const sbH=c=>({apikey:c.key,Authorization:'Bearer '+c.key,'Content-Type':'application/json'});
+async function sbPush(){
+  const c=cfg();if(!c||!c.url)return;
+  try{
+    const r=await fetch(c.url+'/rest/v1/app_state?on_conflict=id',{method:'POST',headers:{...sbH(c),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id:'main',data:state})});
+    if(!r.ok)throw 0;sync={ok:true,msg:'متصل'};
+  }catch(e){sync={ok:false,msg:'خطأ مزامنة'}}
+  updSync();
+}
+async function sbPull(){
+  const c=cfg();if(!c||!c.url)return;
+  try{
+    const r=await fetch(c.url+'/rest/v1/app_state?id=eq.main&select=data',{headers:sbH(c)});
+    if(!r.ok)throw 0;const j=await r.json();
+    if(j[0]&&j[0].data){
+      if((j[0].data.updated||0)>(state.updated||0)){state=j[0].data;localStorage.setItem(KEY,JSON.stringify(state));softRender()}
+    }else sbPush();
+    sync={ok:true,msg:'متصل'};
+  }catch(e){sync={ok:false,msg:'خطأ مزامنة'}}
+  updSync();
+}
+setInterval(sbPull,4000);
+function updSync(){const e=$('#syncDot');if(e){e.className='dot '+(sync.ok===true?'ok':sync.ok===false?'err':'');e.nextSibling.textContent=sync.msg}}
+
+/* ===================== الحالة والواجهة ===================== */
+const ui={role:null,tab:'buses',busId:null,date:today(),period:'daily',pdate:today(),repType:'daily',repBus:'',stuBus:'',loginRole:'head'};
+let charts=[];
+const isHead=()=>ui.role==='head';
+const busOf=id=>state.buses.find(b=>b.id===id);
+const stuOf=id=>state.students.filter(s=>s.busId===id);
+const modalOpen=()=>$('#modal').classList.contains('open');
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1400)}
+function softRender(){if(modalOpen()||!ui.role)return;const y=scrollY;render();scrollTo(0,y)}
+
+/* ===================== الإحصائيات ===================== */
+function rangeDates(period,ds){
+  const d=parseD(ds);
+  if(period==='daily')return [ds];
+  if(period==='weekly'){const s=new Date(d);s.setDate(d.getDate()-d.getDay());return Array.from({length:7},(_,i)=>{const x=new Date(s);x.setDate(s.getDate()+i);return fmt(x)})}
+  const n=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  return Array.from({length:n},(_,i)=>fmt(new Date(d.getFullYear(),d.getMonth(),i+1)));
+}
+function periodLabel(period,ds){
+  const r=rangeDates(period,ds);
+  if(period==='daily')return arDate(ds);
+  if(period==='weekly')return 'الأسبوع من '+arDate(r[0])+' إلى '+arDate(r[6]);
+  return 'شهر '+parseD(ds).toLocaleDateString('ar-EG',{month:'long',year:'numeric'});
+}
+function stats(dates,busId){
+  const ids=new Set(state.students.filter(s=>!busId||s.busId===busId).map(s=>s.id));
+  const stuMap=Object.fromEntries(state.students.map(s=>[s.id,s]));
+  const t={P:0,A:0,L:0},byBus={},byDate={},byStu={},rows=[];
+  state.buses.forEach(b=>byBus[b.id]={P:0,A:0,L:0});
+  dates.forEach(d=>{
+    byDate[d]={P:0,A:0,L:0};
+    const day=state.attendance[d]||{};
+    for(const sid in day){
+      if(!ids.has(sid))continue;const s=stuMap[sid],st=day[sid];
+      t[st]++;byDate[d][st]++;
+      if(byBus[s.busId])byBus[s.busId][st]++;
+      (byStu[sid]=byStu[sid]||{P:0,A:0,L:0})[st]++;
+      rows.push({date:d,s,st});
+    }
+  });
+  return {t,byBus,byDate,byStu,rows,total:t.P+t.A+t.L};
+}
+function recordedOn(busId,d){const day=state.attendance[d]||{};return stuOf(busId).filter(s=>day[s.id]).length}
+
+/* ===================== العرض ===================== */
+function render(){
+  charts.forEach(c=>c.destroy());charts=[];
+  $('#app').innerHTML=ui.role?shell():loginView();
+  if(ui.role&&ui.tab==='dashboard')drawCharts();
+  updSync();
+}
+function loginView(){
+  return `<div class="login card">
+    <div class="row"><span class="plate">🚌</span><h2 style="margin:0">منصة النقل المدرسي</h2></div>
+    <div class="roles">
+      <button data-act="lrole" data-v="head" class="${ui.loginRole==='head'?'on':''}">المشرفة الرئيسية<br><span class="note">تسجيل الحضور وإدارة البيانات</span></button>
+      <button data-act="lrole" data-v="admin" class="${ui.loginRole==='admin'?'on':''}">إدارة المدرسة<br><span class="note">الإحصائيات والتقارير</span></button>
+    </div>
+    <div class="field"><label>الرقم السري</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn pri" style="width:100%" data-act="login">دخول</button>
+  </div>`;
+}
+function shell(){
+  const tabs=isHead()?[['buses','الباصات'],['dashboard','لوحة الإحصائيات'],['students','الطلاب'],['manage','الباصات والمشرفات'],['reports','التقارير'],['settings','الإعدادات']]
+                     :[['dashboard','لوحة الإحصائيات'],['buses','الباصات'],['students','الطلاب'],['reports','التقارير']];
+  if(!tabs.some(t=>t[0]===ui.tab))ui.tab=tabs[0][0];
+  const views={buses:ui.busId?attView():busesView(),dashboard:dashView(),students:studentsView(),manage:manageView(),reports:reportsView(),settings:settingsView()};
+  return `<div class="topbar"><div class="brand"><span class="plate">🚌</span>${esc(state.settings.school)}</div>
+    <div class="sp"></div><span class="role"><i class="dot" id="syncDot"></i><span></span></span>
+    <span class="role">${isHead()?'المشرفة الرئيسية':'إدارة المدرسة'}</span>
+    <button class="btn sm" data-act="logout">خروج</button></div>
+    <div class="tabs">${tabs.map(t=>`<button class="${ui.tab===t[0]?'on':''}" data-act="tab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>
+    <main>${views[ui.tab]}</main>`;
+}
+
+/* ---- الباصات ---- */
+function busesView(){
+  const t=today();
+  return `<h2>الباصات</h2>
+  <p class="note">اليوم: ${arDate(t)}${isHead()?' — اختاري باصًا لتسجيل الحضور':''}</p>
+  <div class="grid g-buses">${state.buses.map(b=>{
+    const n=stuOf(b.id).length,r=recordedOn(b.id,t);
+    return `<button class="card bus" data-act="openbus" data-id="${b.id}">
+      <span class="plate">${esc(b.number)}</span>
+      <div class="sup">${b.supervisor?esc(b.supervisor):'<span class="meta">لم تُحدد المشرفة</span>'}</div>
+      <div class="meta">${n} طالب · سُجّل اليوم ${r}/${n}</div>
+      <div class="bar"><i style="width:${pct(r,n)}%"></i></div></button>`}).join('')||'<div class="empty">لا توجد باصات</div>'}</div>`;
+}
+
+/* ---- تسجيل الحضور ---- */
+function attView(){
+  const b=busOf(ui.busId);if(!b){ui.busId=null;return busesView()}
+  const list=stuOf(b.id),day=(state.attendance[ui.date]||{});
+  const c={P:0,A:0,L:0};list.forEach(s=>day[s.id]&&c[day[s.id]]++);
+  const dis=isHead()?'':'disabled';
+  return `<div class="row sb no-print" style="margin-bottom:14px">
+    <button class="btn" data-act="backbuses">→ كل الباصات</button>
+    <div class="inline row"><label style="margin:0">التاريخ</label><input type="date" value="${ui.date}" data-chg="attdate"></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="row sb"><div class="row"><span class="plate" style="font-size:20px;line-height:40px">${esc(b.number)}</span>
+      <div><b>${b.supervisor?esc(b.supervisor):'—'}</b><div class="note">${b.supPhone?'<a href="tel:'+esc(b.supPhone)+'">'+esc(b.supPhone)+'</a> · ':''}${list.length} طالب</div></div></div>
+      <div class="row"><span class="chip P">حاضر ${c.P}</span><span class="chip A">غائب ${c.A}</span><span class="chip L">متأخر ${c.L}</span>
+      ${isHead()&&list.length?`<button class="btn sm" data-act="allP">الكل حاضر</button>`:''}</div></div></div>
+  <div class="card">${list.length?list.map(s=>`<div class="stu">
+      <div class="nm"><b>${esc(s.name)}</b><span>${esc(s.grade||'')}${s.address?' · '+esc(s.address):''}</span></div>
+      <div><span class="note">${esc(s.parent||'ولي الأمر')}</span><br>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:'—'}</div>
+      <div class="mk">${['P','A','L'].map(k=>`<button ${dis} class="${k} ${day[s.id]===k?'on':''}" data-act="mark" data-id="${s.id}" data-s="${k}">${ST[k]}</button>`).join('')}</div>
+    </div>`).join(''):'<div class="empty">لا يوجد طلاب في هذا الباص بعد. أضيفيهم من تبويب «الطلاب».</div>'}</div>
+  ${isHead()?'<p class="note">يُحفظ كل تسجيل فورًا ويظهر مباشرة عند إدارة المدرسة. اضغطي على الحالة مرة ثانية لإلغائها.</p>':''}`;
+}
+
+/* ---- لوحة الإحصائيات ---- */
+function dashView(){
+  const dates=rangeDates(ui.period,ui.pdate),S=stats(dates),t=today();
+  const doneToday=state.buses.filter(b=>stuOf(b.id).length&&recordedOn(b.id,b.id&&t)>0).length;
+  const withStu=state.buses.filter(b=>stuOf(b.id).length).length;
+  const lst=S.rows.filter(r=>r.st!=='P').sort((a,b)=>a.date<b.date?1:-1);
+  return `<div class="row sb no-print" style="margin-bottom:12px"><h2 style="margin:0">لوحة الإحصائيات</h2>
+    <div class="row inline"><div class="seg">${[['daily','يومي'],['weekly','أسبوعي'],['monthly','شهري']].map(p=>`<button class="${ui.period===p[0]?'on':''}" data-act="period" data-v="${p[0]}">${p[1]}</button>`).join('')}</div>
+    <input type="date" value="${ui.pdate}" data-chg="pdate"><button class="btn" onclick="print()">طباعة</button></div></div>
+  <p class="note">${periodLabel(ui.period,ui.pdate)} · الباصات التي سجّلت اليوم: ${doneToday} من ${withStu}</p>
+  <div class="grid g-kpi" style="margin-bottom:14px">
+    <div class="card kpi"><div class="n">${state.students.length}</div><div class="l">إجمالي الطلاب</div></div>
+    <div class="card kpi ok"><div class="n">${S.t.P}</div><div class="l">حضور</div></div>
+    <div class="card kpi bad"><div class="n">${S.t.A}</div><div class="l">غياب</div></div>
+    <div class="card kpi late"><div class="n">${S.t.L}</div><div class="l">تأخير</div></div>
+    <div class="card kpi"><div class="n">${pct(S.t.P,S.total)}%</div><div class="l">نسبة الحضور</div></div></div>
+  <div class="grid g-2" style="margin-bottom:14px">
+    <div class="card"><h3>توزيع الحالات</h3><div style="height:260px"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h3>حسب الباص</h3><div style="height:260px"><canvas id="c2"></canvas></div></div></div>
+  ${ui.period!=='daily'?`<div class="card" style="margin-bottom:14px"><h3>الاتجاه اليومي</h3><div style="height:260px"><canvas id="c3"></canvas></div></div>`:''}
+  <div class="card scroll" style="margin-bottom:14px"><h3>تفاصيل الباصات</h3>${busTable(S)}</div>
+  <div class="card scroll"><h3>الغائبون والمتأخرون</h3>${lst.length?`<table><tr><th>التاريخ</th><th>الطالب</th><th>الباص</th><th>الحالة</th><th>ولي الأمر</th><th>الجوال</th></tr>${lst.slice(0,200).map(r=>`<tr><td>${r.date}</td><td>${esc(r.s.name)}</td><td>${esc(busOf(r.s.busId)?.number||'')}</td><td><span class="chip ${r.st}">${ST[r.st]}</span></td><td>${esc(r.s.parent||'')}</td><td>${r.s.phone?`<a href="tel:${esc(r.s.phone)}">${esc(r.s.phone)}</a>`:''}</td></tr>`).join('')}</table>`:'<div class="empty">لا توجد حالات غياب أو تأخير في هذه الفترة</div>'}</div>`;
+}
+function busTable(S){
+  return `<table><tr><th>الباص</th><th>المشرفة</th><th>الطلاب</th><th>حضور</th><th>غياب</th><th>تأخير</th><th>نسبة الحضور</th></tr>${state.buses.map(b=>{const x=S.byBus[b.id],tot=x.P+x.A+x.L;return `<tr><td>${esc(b.number)}</td><td>${esc(b.supervisor||'—')}</td><td>${stuOf(b.id).length}</td><td>${x.P}</td><td>${x.A}</td><td>${x.L}</td><td>${tot?pct(x.P,tot)+'%':'—'}</td></tr>`}).join('')}</table>`;
+}
+function drawCharts(){
+  if(!window.Chart)return;
+  Chart.defaults.font.family="'IBM Plex Sans Arabic',Tahoma";
+  const dates=rangeDates(ui.period,ui.pdate),S=stats(dates);
+  const col={P:'#1f9d63',A:'#d6403a',L:'#e08a00'};
+  const opt={responsive:true,maintainAspectRatio:false,plugins:{legend:{rtl:true,labels:{usePointStyle:true}}}};
+  const c1=$('#c1');if(c1)charts.push(new Chart(c1,{type:'doughnut',data:{labels:['حاضر','غائب','متأخر'],datasets:[{data:[S.t.P,S.t.A,S.t.L],backgroundColor:[col.P,col.A,col.L],borderWidth:0}]},options:{...opt,cutout:'62%'}}));
+  const c2=$('#c2');if(c2)charts.push(new Chart(c2,{type:'bar',data:{labels:state.buses.map(b=>'باص '+b.number),datasets:['P','A','L'].map(k=>({label:ST[k],data:state.buses.map(b=>S.byBus[b.id][k]),backgroundColor:col[k],borderRadius:3}))},options:{...opt,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}}));
+  const c3=$('#c3');if(c3){const ds=dates.filter(d=>state.attendance[d]);charts.push(new Chart(c3,{type:'line',data:{labels:ds.map(d=>d.slice(5)),datasets:['P','A','L'].map(k=>({label:ST[k],data:ds.map(d=>S.byDate[d][k]),borderColor:col[k],backgroundColor:col[k],tension:.3,pointRadius:3}))},options:{...opt,scales:{y:{beginAtZero:true,ticks:{precision:0}}}}}))}
+}
+
+/* ---- الطلاب ---- */
+function studentsView(){
+  const list=state.students.filter(s=>!ui.stuBus||s.busId===ui.stuBus);
+  return `<div class="row sb no-print" style="margin-bottom:12px"><h2 style="margin:0">الطلاب (${list.length})</h2>
+    <div class="row inline"><select data-chg="stuBus"><option value="">كل الباصات</option>${state.buses.map(b=>`<option value="${b.id}" ${ui.stuBus===b.id?'selected':''}>باص ${esc(b.number)}</option>`).join('')}</select>
+    ${isHead()?`<button class="btn pri" data-act="addstu">+ إضافة طالب</button><button class="btn" data-act="importstu">استيراد من Excel</button>`:''}</div></div>
+  <div class="card scroll">${list.length?`<table><tr><th>الطالب</th><th>الصف</th><th>الباص</th><th>ولي الأمر</th><th>الجوال</th><th>الحي</th>${isHead()?'<th></th>':''}</tr>${list.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.grade||'')}</td><td>${esc(busOf(s.busId)?.number||'—')}</td><td>${esc(s.parent||'')}</td><td>${s.phone?`<a href="tel:${esc(s.phone)}">${esc(s.phone)}</a>`:''}</td><td>${esc(s.address||'')}</td>${isHead()?`<td style="white-space:nowrap"><button class="btn sm" data-act="editstu" data-id="${s.id}">تعديل</button> <button class="btn sm danger" data-act="delstu" data-id="${s.id}">حذف</button></td>`:''}</tr>`).join('')}</table>`:'<div class="empty">لا يوجد طلاب بعد. أضيفي طالبًا أو استوردي ملف Excel.</div>'}</div>`;
+}
+
+/* ---- إدارة الباصات والمشرفات ---- */
+function manageView(){
+  return `<div class="row sb" style="margin-bottom:12px"><h2 style="margin:0">الباصات والمشرفات</h2><button class="btn pri" data-act="addbus">+ إضافة باص</button></div>
+  <div class="card scroll"><table><tr><th>رقم الباص</th><th>اسم المشرفة</th><th>جوال المشرفة</th><th>الطلاب</th><th></th></tr>${state.buses.map(b=>`<tr><td><span class="plate">${esc(b.number)}</span></td><td>${esc(b.supervisor||'—')}</td><td>${esc(b.supPhone||'')}</td><td>${stuOf(b.id).length}</td><td style="white-space:nowrap"><button class="btn sm" data-act="editbus" data-id="${b.id}">تعديل</button> <button class="btn sm danger" data-act="delbus" data-id="${b.id}">حذف</button></td></tr>`).join('')}</table></div>`;
+}
+
+/* ---- التقارير ---- */
+function reportsView(){
+  return `<div class="no-print"><h2>التقارير</h2>
+  <div class="card row inline" style="margin-bottom:14px">
+    <div><label>نوع التقرير</label><select data-chg="repType"><option value="daily" ${ui.repType==='daily'?'selected':''}>يومي</option><option value="weekly" ${ui.repType==='weekly'?'selected':''}>أسبوعي</option><option value="monthly" ${ui.repType==='monthly'?'selected':''}>شهري</option></select></div>
+    <div><label>التاريخ</label><input type="date" value="${ui.pdate}" data-chg="pdate"></div>
+    <div><label>الباص</label><select data-chg="repBus"><option value="">كل الباصات</option>${state.buses.map(b=>`<option value="${b.id}" ${ui.repBus===b.id?'selected':''}>باص ${esc(b.number)}</option>`).join('')}</select></div>
+  </div>
+  <div class="row" style="margin-bottom:10px"><button class="btn pri" data-act="exWord">تصدير Word</button><button class="btn pri" data-act="exXlsx">تصدير Excel</button><button class="btn pri" data-act="exPdf">حفظ PDF</button><button class="btn" onclick="print()">طباعة</button></div>
+  <p class="note">التقرير أدناه قابل للتعديل مباشرة: اضغطي على أي نص وعدّليه قبل التصدير أو الطباعة. لحفظ PDF اختاري «حفظ كـ PDF» من نافذة الطباعة.</p></div>
+  <div class="sheet" id="sheet" contenteditable="true">${buildReport()}</div>`;
+}
+function buildReport(){
+  const dates=rangeDates(ui.repType,ui.pdate),S=stats(dates,ui.repBus||null);
+  const title={daily:'التقرير اليومي',weekly:'التقرير الأسبوعي',monthly:'التقرير الشهري'}[ui.repType];
+  const b=ui.repBus?busOf(ui.repBus):null;
+  let h=`<h1>${esc(state.settings.school)} — ${title} للنقل المدرسي</h1><div class="note">${periodLabel(ui.repType,ui.pdate)}${b?' · باص '+esc(b.number)+(b.supervisor?' · المشرفة: '+esc(b.supervisor):''):''}</div>`;
+  h+=`<h4>الملخص</h4><table data-name="الملخص"><tr><th>الحضور</th><th>الغياب</th><th>التأخير</th><th>إجمالي التسجيلات</th><th>نسبة الحضور</th></tr><tr><td>${S.t.P}</td><td>${S.t.A}</td><td>${S.t.L}</td><td>${S.total}</td><td>${pct(S.t.P,S.total)}%</td></tr></table>`;
+  if(!b){
+    h+=`<h4>حسب الباص</h4><div data-name="الباصات">${busTable(S).replace('<table>','<table data-name="الباصات">')}</div>`;
+  }else{
+    const st=stuOf(b.id);
+    h+=`<h4>حسب الطالب</h4><table data-name="الطلاب"><tr><th>الطالب</th><th>الصف</th><th>ولي الأمر</th><th>الجوال</th><th>حضور</th><th>غياب</th><th>تأخير</th></tr>${st.map(s=>{const x=S.byStu[s.id]||{P:0,A:0,L:0};return `<tr><td>${esc(s.name)}</td><td>${esc(s.grade||'')}</td><td>${esc(s.parent||'')}</td><td>${esc(s.phone||'')}</td><td>${x.P}</td><td>${x.A}</td><td>${x.L}</td></tr>`}).join('')}</table>`;
+  }
+  const lst=S.rows.filter(r=>r.st!=='P').sort((a,b)=>a.date<b.date?-1:1);
+  h+=`<h4>الغائبون والمتأخرون</h4>`+(lst.length?`<table data-name="الغياب والتأخير"><tr><th>التاريخ</th><th>الطالب</th><th>الباص</th><th>الحالة</th><th>ولي الأمر</th><th>الجوال</th></tr>${lst.map(r=>`<tr><td>${r.date}</td><td>${esc(r.s.name)}</td><td>${esc(busOf(r.s.busId)?.number||'')}</td><td>${ST[r.st]}</td><td>${esc(r.s.parent||'')}</td><td>${esc(r.s.phone||'')}</td></tr>`).join('')}</table>`:'<p>لا توجد حالات غياب أو تأخير.</p>');
+  return h;
+}
+
+/* ---- الإعدادات ---- */
+function settingsView(){
+  const c=cfg()||{};
+  return `<h2>الإعدادات</h2><div class="grid g-2">
+  <div class="card"><h3>المدرسة والأرقام السرية</h3>
+    <div class="field"><label>اسم المدرسة</label><input id="sSchool" value="${esc(state.settings.school)}"></div>
+    <div class="field"><label>الرقم السري للمشرفة الرئيسية</label><input id="sPinH" value="${esc(state.settings.pins.head)}"></div>
+    <div class="field"><label>الرقم السري لإدارة المدرسة</label><input id="sPinA" value="${esc(state.settings.pins.admin)}"></div>
+    <button class="btn pri" data-act="saveset">حفظ</button></div>
+  <div class="card"><h3>المزامنة بين الأجهزة</h3>
+    <p class="note">لتظهر البيانات عند إدارة المدرسة من جهاز آخر، أدخلي بيانات مشروع Supabase. بدونها تعمل المنصة على هذا المتصفح فقط.</p>
+    <div class="field"><label>رابط المشروع</label><input id="sbUrl" dir="ltr" placeholder="https://xxxx.supabase.co" value="${esc(c.url||'')}"></div>
+    <div class="field"><label>المفتاح العام (anon key)</label><input id="sbKey" dir="ltr" value="${esc(c.key||'')}"></div>
+    <button class="btn pri" data-act="savesb">حفظ وتفعيل</button>
+    <p class="note">نفّذي هذا مرة واحدة في SQL Editor:</p>
+<pre>create table app_state (id text primary key, data jsonb);
+alter table app_state enable row level security;
+create policy "all" on app_state for all using (true) with check (true);</pre></div>
+  <div class="card"><h3>نسخة احتياطية</h3><div class="row"><button class="btn" data-act="backup">تنزيل نسخة</button><button class="btn" data-act="restore">استرجاع نسخة</button></div></div>
+  <div class="card"><h3>بيانات</h3><div class="row"><button class="btn" data-act="demo">تحميل بيانات تجريبية</button><button class="btn danger" data-act="reset">مسح كل البيانات</button></div></div></div>`;
+}
+
+/* ===================== الإجراءات ===================== */
+function doLogin(){
+  const p=($('#pin')||{}).value;
+  if(p===state.settings.pins[ui.loginRole]){ui.role=ui.loginRole;ui.tab=ui.role==='head'?'buses':'dashboard';ui.busId=null;sessionStorage.setItem('sb_role',ui.role);render()}
+  else{toast('الرقم السري غير صحيح')}
+}
+const A={
+  lrole:t=>{ui.loginRole=t.dataset.v;render()},
+  login:doLogin,
+  logout:()=>{ui.role=null;sessionStorage.removeItem('sb_role');render()},
+  tab:t=>{ui.tab=t.dataset.v;if(ui.tab!=='buses')ui.busId=null;render()},
+  openbus:t=>{ui.busId=t.dataset.id;ui.date=today();render();scrollTo(0,0)},
+  backbuses:()=>{ui.busId=null;render()},
+  mark:t=>{
+    if(!isHead())return;const d=ui.date;state.attendance[d]=state.attendance[d]||{};
+    if(state.attendance[d][t.dataset.id]===t.dataset.s)delete state.attendance[d][t.dataset.id];
+    else state.attendance[d][t.dataset.id]=t.dataset.s;
+    save();const y=scrollY;render();scrollTo(0,y);toast('تم الحفظ ✓');
+  },
+  allP:()=>{const d=ui.date;state.attendance[d]=state.attendance[d]||{};stuOf(ui.busId).forEach(s=>{if(!state.attendance[d][s.id])state.attendance[d][s.id]='P'});save();render();toast('تم الحفظ ✓')},
+  period:t=>{ui.period=t.dataset.v;render()},
+  addstu:()=>stuForm(),
+  editstu:t=>stuForm(state.students.find(s=>s.id===t.dataset.id)),
+  delstu:t=>{if(confirm('حذف هذا الطالب؟')){const id=t.dataset.id;state.students=state.students.filter(s=>s.id!==id);Object.values(state.attendance).forEach(d=>delete d[id]);save();render()}},
+  addbus:()=>busForm(),
+  editbus:t=>busForm(busOf(t.dataset.id)),
+  delbus:t=>{const id=t.dataset.id;if(stuOf(id).length){alert('انقلي طلاب هذا الباص إلى باص آخر أولًا.');return}if(confirm('حذف هذا الباص؟')){state.buses=state.buses.filter(b=>b.id!==id);save();render()}},
+  importstu:()=>pickFile('.xlsx,.xls,.csv',importExcel),
+  exWord:()=>{const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{direction:rtl;font-family:Arial}table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:4px;text-align:right}th{background:#eee}</style></head><body dir="rtl">${$('#sheet').innerHTML}</body></html>`;download(new Blob(['\ufeff',html],{type:'application/msword'}),'تقرير-النقل-'+ui.pdate+'.doc')},
+  exXlsx:()=>{
+    const wb=XLSX.utils.book_new();
+    $('#sheet').querySelectorAll('table').forEach((tb,i)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.table_to_sheet(tb),(tb.dataset.name||'ورقة'+(i+1)).slice(0,31)));
+    wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,'تقرير-النقل-'+ui.pdate+'.xlsx');
+  },
+  exPdf:()=>{toast('اختاري «حفظ كـ PDF» من نافذة الطباعة');setTimeout(print,600)},
+  saveset:()=>{state.settings.school=$('#sSchool').value.trim()||'اسم المدرسة';state.settings.pins.head=$('#sPinH').value.trim()||'1234';state.settings.pins.admin=$('#sPinA').value.trim()||'4321';save();render();toast('تم الحفظ ✓')},
+  savesb:()=>{const url=$('#sbUrl').value.trim().replace(/\/$/,''),key=$('#sbKey').value.trim();if(url&&key)localStorage.setItem(CFGKEY,JSON.stringify({url,key}));else localStorage.removeItem(CFGKEY);sbPull().then(sbPush);toast('تم الحفظ ✓')},
+  backup:()=>download(new Blob([JSON.stringify(state)],{type:'application/json'}),'نسخة-النقل-'+today()+'.json'),
+  restore:()=>pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const s=JSON.parse(r.result);if(!s.buses)throw 0;state=s;save();render();toast('تم الاسترجاع ✓')}catch(e){alert('الملف غير صالح')}};r.readAsText(f)}),
+  demo:()=>{if(confirm('سيتم استبدال البيانات الحالية ببيانات تجريبية. متابعة؟')){loadDemo();save();render()}},
+  reset:()=>{if(confirm('سيتم حذف كل البيانات نهائيًا. متابعة؟')){const s=state.settings;state=defaultState();state.settings=s;save();render()}}
+};
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');
+  if(t){if(t.dataset.act==='close'){closeModal();return}A[t.dataset.act]&&A[t.dataset.act](t,e)}
+  else if(e.target.id==='modal')closeModal();
+});
+document.addEventListener('change',e=>{
+  const k=e.target.dataset.chg;if(!k)return;
+  if(k==='attdate')ui.date=e.target.value||today();
+  else if(k==='pdate')ui.pdate=e.target.value||today();
+  else ui[k]=e.target.value;
+  render();
+});
+
+/* ---- نوافذ الإدخال ---- */
+function openModal(html){$('#modalBox').innerHTML=html;$('#modal').classList.add('open')}
+function closeModal(){$('#modal').classList.remove('open')}
+function stuForm(s){
+  s=s||{busId:ui.stuBus||(state.buses[0]||{}).id};
+  openModal(`<h3>${s.id?'تعديل طالب':'إضافة طالب'}</h3>
+  <div class="field"><label>اسم الطالب</label><input id="f_name" value="${esc(s.name||'')}"></div>
+  <div class="field"><label>الصف</label><input id="f_grade" value="${esc(s.grade||'')}"></div>
+  <div class="field"><label>الباص</label><select id="f_bus">${state.buses.map(b=>`<option value="${b.id}" ${b.id===s.busId?'selected':''}>باص ${esc(b.number)}${b.supervisor?' — '+esc(b.supervisor):''}</option>`).join('')}</select></div>
+  <div class="field"><label>اسم ولي الأمر</label><input id="f_parent" value="${esc(s.parent||'')}"></div>
+  <div class="field"><label>جوال ولي الأمر</label><input id="f_phone" inputmode="tel" dir="ltr" value="${esc(s.phone||'')}"></div>
+  <div class="field"><label>الحي / العنوان</label><input id="f_addr" value="${esc(s.address||'')}"></div>
+  <div class="row"><button class="btn pri" id="fsave">حفظ</button><button class="btn" data-act="close">إلغاء</button></div>`);
+  $('#fsave').onclick=()=>{
+    const name=$('#f_name').value.trim();if(!name){toast('اكتبي اسم الطالب');return}
+    const o={name,grade:$('#f_grade').value.trim(),busId:$('#f_bus').value,parent:$('#f_parent').value.trim(),phone:$('#f_phone').value.trim(),address:$('#f_addr').value.trim()};
+    if(s.id)Object.assign(state.students.find(x=>x.id===s.id),o);else state.students.push({id:uid(),...o});
+    save();closeModal();render();toast('تم الحفظ ✓');
+  };
+}
+function busForm(b){
+  b=b||{};
+  openModal(`<h3>${b.id?'تعديل باص':'إضافة باص'}</h3>
+  <div class="field"><label>رقم الباص</label><input id="f_num" value="${esc(b.number||'')}"></div>
+  <div class="field"><label>اسم المشرفة</label><input id="f_sup" value="${esc(b.supervisor||'')}"></div>
+  <div class="field"><label>جوال المشرفة</label><input id="f_sp" inputmode="tel" dir="ltr" value="${esc(b.supPhone||'')}"></div>
+  <div class="row"><button class="btn pri" id="fsave">حفظ</button><button class="btn" data-act="close">إلغاء</button></div>`);
+  $('#fsave').onclick=()=>{
+    const number=$('#f_num').value.trim();if(!number){toast('اكتبي رقم الباص');return}
+    const o={number,supervisor:$('#f_sup').value.trim(),supPhone:$('#f_sp').value.trim()};
+    if(b.id)Object.assign(busOf(b.id),o);else state.buses.push({id:uid(),...o});
+    save();closeModal();render();toast('تم الحفظ ✓');
+  };
+}
+
+/* ---- ملفات ---- */
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function pickFile(accept,cb){const i=document.createElement('input');i.type='file';i.accept=accept;i.onchange=()=>i.files[0]&&cb(i.files[0]);i.click()}
+function importExcel(f){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const wb=XLSX.read(r.result,{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      let n=0;
+      rows.forEach(x=>{
+        const name=String(x['اسم الطالب']||x['الاسم']||'').trim();if(!name)return;
+        const num=String(x['رقم الباص']||x['الباص']||'').trim();
+        let bus=state.buses.find(b=>b.number===num);
+        if(!bus&&num){bus={id:uid(),number:num,supervisor:String(x['المشرفة']||x['اسم المشرفة']||''),supPhone:''};state.buses.push(bus)}
+        if(!bus)bus=state.buses[0];
+        if(bus&&!bus.supervisor&&(x['المشرفة']||x['اسم المشرفة']))bus.supervisor=String(x['المشرفة']||x['اسم المشرفة']);
+        state.students.push({id:uid(),name,grade:String(x['الصف']||''),busId:bus.id,parent:String(x['ولي الأمر']||x['اسم ولي الأمر']||''),phone:String(x['جوال ولي الأمر']||x['الجوال']||x['رقم ولي الأمر']||''),address:String(x['الحي']||x['العنوان']||'')});n++;
+      });
+      save();render();toast('تم استيراد '+n+' طالب');
+    }catch(e){alert('تعذّرت قراءة الملف')}
+  };
+  r.readAsArrayBuffer(f);
+}
+
+/* ---- بيانات تجريبية ---- */
+function loadDemo(){
+  const first=['محمد','عبدالله','فهد','سلمان','ريم','لينا','سارة','نورة','أحمد','خالد','هند','جود','يوسف','تالا','عمر'],fam=['العتيبي','الحربي','الغامدي','الزهراني','القحطاني','السلمي','المالكي','الشهري'];
+  const sups=['أم محمد','أم عبدالله','أم فهد','أم سلمان','أم خالد','أم أحمد','أم يوسف','أم عمر','أم سعد','أم تركي'];
+  const st=defaultState();st.settings=state.settings;
+  st.buses.forEach((b,i)=>{b.supervisor=sups[i];b.supPhone='05'+(10000000+Math.floor(Math.random()*8e7))});
+  st.buses.forEach(b=>{for(let k=0;k<8;k++){st.students.push({id:uid(),name:first[Math.floor(Math.random()*first.length)]+' '+fam[Math.floor(Math.random()*fam.length)],grade:['الأول','الثاني','الثالث','الرابع'][k%4]+' الابتدائي',busId:b.id,parent:'أبو '+first[Math.floor(Math.random()*8)],phone:'05'+(10000000+Math.floor(Math.random()*8e7)),address:'حي '+['النزهة','الروضة','العزيزية','الشرائع'][k%4]})}});
+  const now=new Date();
+  for(let i=0;i<35;i++){const d=new Date(now);d.setDate(now.getDate()-i);if([5,6].includes(d.getDay()))continue;const key=fmt(d);st.attendance[key]={};st.students.forEach(s=>{const r=Math.random();st.attendance[key][s.id]=r<.88?'P':r<.95?'A':'L'})}
+  state=st;
+}
+
+/* ===================== البداية ===================== */
+ui.role=sessionStorage.getItem('sb_role');
+if(ui.role){ui.tab=ui.role==='head'?'buses':'dashboard'}
+render();sbPull();
+</script>
+</body>
+</html>
