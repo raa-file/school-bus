@@ -153,6 +153,12 @@ const DEF_TPL={
 };
 /* اسم المدرسة ثابت — يُغيَّر من هنا فقط */
 const SCHOOL_NAME='النقل المدرسي';
+/* === دخول المالك السري (خاص بريم فقط) ===
+   للدخول: افتحي رابط الموقع وأضيفي في آخره  #raa  ثم أدخلي الرقم السري.
+   غيّري الكلمة والرقم من هنا متى شئتِ. حساب المالك لا يظهر لأحد ولا يُحفظ في قاعدة البيانات. */
+const OWNER_KEY='raa';
+const OWNER_PIN='785200';
+const OWNER={id:'__owner__',name:'المالك',role:'owner',pin:OWNER_PIN};
 function defaultState(){
   return migrate({updated:0,settings:{school:SCHOOL_NAME},
     users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:'4321'}],
@@ -261,9 +267,10 @@ function updSync(){const e=$('#syncDot');if(!e)return;if(!cfg()){e.className='do
 /* ===================== الحالة ===================== */
 const ui={uid:null,tab:'buses',busId:null,date:today(),trip:'go',period:'daily',dTrip:'',pdate:today(),repType:'sheet',rTrip:'',repBus:'',stuBus:'',loginUser:null};
 let charts=[];
-const me=()=>state.users.find(u=>u.id===ui.uid);
-const isHead=()=>{const u=me();return !!u&&u.role==='head'};
-const isAdmin=()=>{const u=me();return !!u&&u.role==='admin'};
+const me=()=>ui.uid===OWNER.id?OWNER:state.users.find(u=>u.id===ui.uid);
+const isOwner=()=>{const u=me();return !!u&&u.role==='owner'};
+const isHead=()=>{const u=me();return !!u&&(u.role==='head'||u.role==='owner')};
+const isAdmin=()=>{const u=me();return !!u&&(u.role==='admin'||u.role==='owner')};
 const busOf=id=>state.buses.find(b=>b.id===id);
 const stuOf=id=>state.students.filter(s=>s.busId===id);
 const busTitle=b=>b?(b.name||('باص رقم '+b.number)):'';
@@ -333,7 +340,12 @@ function render(){
   updSync();
 }
 function loginView(){
-  if(!ui.loginUser||!state.users.some(u=>u.id===ui.loginUser))ui.loginUser=state.users[0].id;
+  if(location.hash==='#'+OWNER_KEY){ui.loginUser=OWNER.id;return `<div class="login card">
+    <div class="row"><span class="plate">🚌</span><h2 style="margin:0">دخول المالك</h2></div>
+    <div class="field"><label>الرقم السري</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn pri" style="width:100%" data-act="login">دخول</button>
+  </div>`;}
+  if(!ui.loginUser||ui.loginUser===OWNER.id||!state.users.some(u=>u.id===ui.loginUser))ui.loginUser=state.users[0].id;
   return `<div class="login card">
     <div class="row"><span class="plate">🚌</span><h2 style="margin:0">منصة النقل المدرسي</h2></div>
     <div class="roles">${state.users.map(u=>`<button data-act="luser" data-id="${u.id}" class="${ui.loginUser===u.id?'on':''}">${esc(u.name)}</button>`).join('')}</div>
@@ -342,7 +354,8 @@ function loginView(){
   </div>`;
 }
 function shell(){
-  const tabs=isHead()?[['buses','تسجيل الحضور']]
+  const tabs=isOwner()?[['buses','تسجيل الحضور'],['dashboard','لوحة الإحصائيات'],['students','الطلاب'],['manage','الباصات والسائقون'],['reports','التقارير والكشوف'],['settings','الإعدادات']]
+             :isHead()?[['buses','تسجيل الحضور']]
                      :[['dashboard','لوحة الإحصائيات'],['buses','الباصات'],['students','الطلاب'],['manage','الباصات والسائقون'],['reports','التقارير والكشوف'],['settings','الإعدادات']];
   if(!tabs.some(t=>t[0]===ui.tab))ui.tab=tabs[0][0];
   const views={buses:ui.busId?attView():busesView(),dashboard:dashView(),students:studentsView(),manage:manageView(),reports:reportsView(),settings:settingsView()};
@@ -530,7 +543,9 @@ function settingsView(){
 
 /* ===================== الإجراءات ===================== */
 function doLogin(){
-  const u=state.users.find(x=>x.id===ui.loginUser),p=($('#pin')||{}).value;
+  const p=($('#pin')||{}).value;
+  if(ui.loginUser===OWNER.id){if(p===OWNER.pin){ui.uid=OWNER.id;ui.tab='dashboard';ui.busId=null;sessionStorage.setItem('sb_uid',OWNER.id);render()}else alert('رقم سري غير صحيح');return}
+  const u=state.users.find(x=>x.id===ui.loginUser);
   if(u&&p===u.pin){ui.uid=u.id;ui.tab=u.role==='head'?'buses':'dashboard';ui.busId=null;sessionStorage.setItem('sb_uid',u.id);render()}
   else toast('الرقم السري غير صحيح');
 }
@@ -538,7 +553,7 @@ function waBtn(s,st){const h=waHref(s,st,ui.date,ui.trip);return h?`<a class="bt
 const A={
   luser:t=>{ui.loginUser=t.dataset.id;render()},
   login:doLogin,
-  logout:()=>{ui.uid=null;sessionStorage.removeItem('sb_uid');render()},
+  logout:()=>{ui.uid=null;sessionStorage.removeItem('sb_uid');if(location.hash==='#'+OWNER_KEY){history.replaceState(null,'',location.pathname+location.search)}render()},
   tab:t=>{ui.tab=t.dataset.v;if(ui.tab!=='buses')ui.busId=null;render()},
   openbus:t=>{ui.busId=t.dataset.id;ui.date=today();render();scrollTo(0,0)},
   backbuses:()=>{ui.busId=null;render()},
@@ -711,7 +726,7 @@ function loadDemo(){
 }
 
 /* ===================== البداية ===================== */
-ui.uid=sessionStorage.getItem('sb_uid');
+ui.uid=sessionStorage.getItem('sb_uid');if(ui.uid===OWNER.id&&location.hash!=='#'+OWNER_KEY){ui.uid=null;sessionStorage.removeItem('sb_uid')}
 if(ui.uid&&me())ui.tab=isHead()?'buses':'dashboard';
 render();schedule(sbPull);sbRealtime();
 
