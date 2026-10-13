@@ -701,7 +701,7 @@ function loadDemo(){
   const sups=['أم محمد','أم عبدالله','أم فهد','أم سلمان','أم خالد','أم أحمد','أم يوسف','أم عمر','أم سعد','أم تركي'];
   const drv=['عبدالرحمن','سعيد','ماجد','ناصر','بدر','علي','صالح','إبراهيم','حمد','طلال'];
   const hoods=['النزهة','الروضة','العزيزية','الشرائع','الزاهر','العوالي'];
-  const ph=()=>'05'+(10000000+Math.floor(Math.random()*8e7));
+  const ph=()=>''; /* بيانات تجريبية بدون أرقام جوال */
   const st=defaultState();st.settings=state.settings;st.users=state.users;
   st.buses.forEach((b,i)=>{b.name='باص '+['الفجر','النور','الأمل','السلام','الريان','المنار','الوفاء','البشائر','الهدى','الزهور'][i];b.supervisor=sups[i];b.supPhone=ph();b.driver=drv[i];b.driverPhone=ph();b.hoods=hoods[i%6]+'، '+hoods[(i+2)%6]});
   st.buses.forEach(b=>{for(let k=0;k<8;k++){st.students.push({id:uid(),name:rnd(first)+' '+rnd(fam),stage:['الأول','الثاني','الثالث'][k%3]+' المتوسط',cls:String(1+k%4),busId:b.id,hood:hoods[k%6],parent:'أبو '+rnd(first),phone:ph()})}});
