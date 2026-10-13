@@ -131,7 +131,7 @@ const today=()=>fmt(new Date());
 const pct=(a,b)=>b?Math.round(a/b*100):0;
 const ST={P:'حاضر',A:'غائب',L:'متأخر'};
 const TRIP={go:'الذهاب',back:'العودة'};
-const ROLE={head:'مشرفة البرنامج الرئيسية',admin:'إدارة المدرسة (عرض)'};
+const ROLE={head:'صلاحية كاملة',admin:'مشاهدة فقط'};
 
 /* التاريخ: اليوم + الهجري + الميلادي */
 const fI=(ds,loc,o)=>parseD(ds).toLocaleDateString(loc,o);
@@ -151,7 +151,7 @@ const DEF_TPL={
 const SCHOOL_NAME='النقل المدرسي';
 function defaultState(){
   return migrate({updated:0,settings:{school:SCHOOL_NAME},
-    users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:'4321'}],
+    users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'head',pin:'4321'}],
     buses:Array.from({length:10},(_,i)=>({id:uid(),number:String(i+1)})),students:[],attendance:{}});
 }
 function migrate(s){
@@ -159,7 +159,8 @@ function migrate(s){
   s.settings.school=SCHOOL_NAME;
   s.settings.cc=s.settings.cc||'966';
   s.settings.tpl=Object.assign({},DEF_TPL,s.settings.tpl||{});
-  if(!s.users||!s.users.length){const p=s.settings.pins||{head:'1234',admin:'4321'};s.users=[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:p.head},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:p.admin}]}
+  if(!s.users||!s.users.length){const p=s.settings.pins||{head:'1234',admin:'4321'};s.users=[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:p.head},{id:uid(),name:'إدارة المدرسة',phone:'',role:'head',pin:p.admin}]}
+  if(!s.settings.adminFull){s.users.forEach(u=>{if(u.name==='إدارة المدرسة'&&u.role==='admin')u.role='head'});s.settings.adminFull=1}
   delete s.settings.pins;
   s.buses.forEach(b=>{['name','driver','driverPhone','supervisor','supPhone','hoods'].forEach(k=>{if(b[k]===undefined)b[k]=''})});
   s.students.forEach(x=>{if(x.stage===undefined){x.stage=x.grade||'';x.cls='';x.hood=x.address||''}});
@@ -644,7 +645,7 @@ function userForm(u){
   openModal(`<h3>${u.id?'تعديل مستخدم':'إضافة مستخدم'}</h3>
   ${fld('u_name','الاسم',u.name)}
   ${fld('u_phone','الجوال',u.phone,'inputmode="tel" dir="ltr"')}
-  <div class="field"><label>الصلاحية</label><select id="u_role"><option value="head" ${u.role==='head'?'selected':''}>${ROLE.head} — تسجيل وتعديل كامل</option><option value="admin" ${u.role==='admin'?'selected':''}>${ROLE.admin}</option></select></div>
+  <div class="field"><label>الصلاحية</label><select id="u_role"><option value="head" ${u.role==='head'?'selected':''}>${ROLE.head} — تسجيل وتعديل</option><option value="admin" ${u.role==='admin'?'selected':''}>${ROLE.admin} — بدون تعديل</option></select></div>
   ${fld('u_pin','الرقم السري',u.pin,'inputmode="numeric"')}
   <div class="row"><button class="btn pri" id="fsave">حفظ</button><button class="btn" data-act="close">إلغاء</button></div>`);
   $('#fsave').onclick=()=>{
