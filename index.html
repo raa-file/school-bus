@@ -131,7 +131,7 @@ const today=()=>fmt(new Date());
 const pct=(a,b)=>b?Math.round(a/b*100):0;
 const ST={P:'حاضر',A:'غائب',L:'متأخر'};
 const TRIP={go:'الذهاب',back:'العودة'};
-const ROLE={head:'صلاحية كاملة',admin:'مشاهدة فقط'};
+const ROLE={head:'المشرفة',admin:'الإدارة'};
 
 /* التاريخ: اليوم + الهجري + الميلادي */
 const fI=(ds,loc,o)=>parseD(ds).toLocaleDateString(loc,o);
@@ -151,7 +151,7 @@ const DEF_TPL={
 const SCHOOL_NAME='النقل المدرسي';
 function defaultState(){
   return migrate({updated:0,settings:{school:SCHOOL_NAME},
-    users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'head',pin:'4321'}],
+    users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:'4321'}],
     buses:Array.from({length:10},(_,i)=>({id:uid(),number:String(i+1)})),students:[],attendance:{}});
 }
 function migrate(s){
@@ -159,8 +159,9 @@ function migrate(s){
   s.settings.school=SCHOOL_NAME;
   s.settings.cc=s.settings.cc||'966';
   s.settings.tpl=Object.assign({},DEF_TPL,s.settings.tpl||{});
-  if(!s.users||!s.users.length){const p=s.settings.pins||{head:'1234',admin:'4321'};s.users=[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:p.head},{id:uid(),name:'إدارة المدرسة',phone:'',role:'head',pin:p.admin}]}
-  if(!s.settings.adminFull){s.users.forEach(u=>{if(u.name==='إدارة المدرسة'&&u.role==='admin')u.role='head'});s.settings.adminFull=1}
+  if(!s.users||!s.users.length){const p=s.settings.pins||{head:'1234',admin:'4321'};s.users=[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:p.head},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:p.admin}]}
+  if(!s.settings.roles2){s.users.forEach(u=>{if(u.name==='إدارة المدرسة')u.role='admin'});delete s.settings.adminFull;s.settings.roles2=1}
+  if(!s.users.some(u=>u.role==='admin'))s.users.push({id:'admin0',name:'إدارة المدرسة',phone:'',role:'admin',pin:'4321'});
   delete s.settings.pins;
   s.buses.forEach(b=>{['name','driver','driverPhone','supervisor','supPhone','hoods'].forEach(k=>{if(b[k]===undefined)b[k]=''})});
   s.students.forEach(x=>{if(x.stage===undefined){x.stage=x.grade||'';x.cls='';x.hood=x.address||''}});
@@ -258,6 +259,7 @@ const ui={uid:null,tab:'buses',busId:null,date:today(),trip:'go',period:'daily',
 let charts=[];
 const me=()=>state.users.find(u=>u.id===ui.uid);
 const isHead=()=>{const u=me();return !!u&&u.role==='head'};
+const isAdmin=()=>{const u=me();return !!u&&u.role==='admin'};
 const busOf=id=>state.buses.find(b=>b.id===id);
 const stuOf=id=>state.students.filter(s=>s.busId===id);
 const busTitle=b=>b?(b.name||('باص رقم '+b.number)):'';
@@ -330,19 +332,19 @@ function loginView(){
   if(!ui.loginUser||!state.users.some(u=>u.id===ui.loginUser))ui.loginUser=state.users[0].id;
   return `<div class="login card">
     <div class="row"><span class="plate">🚌</span><h2 style="margin:0">منصة النقل المدرسي</h2></div>
-    <div class="roles">${state.users.map(u=>`<button data-act="luser" data-id="${u.id}" class="${ui.loginUser===u.id?'on':''}">${esc(u.name)}<br><span class="note">${ROLE[u.role]}</span></button>`).join('')}</div>
+    <div class="roles">${state.users.map(u=>`<button data-act="luser" data-id="${u.id}" class="${ui.loginUser===u.id?'on':''}">${esc(u.name)}</button>`).join('')}</div>
     <div class="field"><label>الرقم السري</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn pri" style="width:100%" data-act="login">دخول</button>
   </div>`;
 }
 function shell(){
-  const tabs=isHead()?[['buses','الباصات'],['dashboard','لوحة الإحصائيات'],['students','الطلاب'],['manage','الباصات والسائقون'],['reports','التقارير والكشوف'],['settings','الإعدادات']]
-                     :[['dashboard','لوحة الإحصائيات'],['buses','الباصات'],['students','الطلاب'],['reports','التقارير والكشوف']];
+  const tabs=isHead()?[['buses','تسجيل الحضور']]
+                     :[['dashboard','لوحة الإحصائيات'],['buses','الباصات'],['students','الطلاب'],['manage','الباصات والسائقون'],['reports','التقارير والكشوف'],['settings','الإعدادات']];
   if(!tabs.some(t=>t[0]===ui.tab))ui.tab=tabs[0][0];
   const views={buses:ui.busId?attView():busesView(),dashboard:dashView(),students:studentsView(),manage:manageView(),reports:reportsView(),settings:settingsView()};
   return `<div class="topbar"><div class="brand"><span class="plate">🚌</span>${esc(state.settings.school)}</div>
     <div class="sp"></div><span class="role"><i class="dot" id="syncDot"></i><span></span></span>
-    <span class="role">${esc(me().name)} · ${ROLE[me().role]}</span>
+    <span class="role">${esc(me().name)}</span>
     <button class="btn sm" data-act="logout">خروج</button></div>
     <div class="tabs">${tabs.map(t=>`<button class="${ui.tab===t[0]?'on':''}" data-act="tab" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>
     <main>${views[ui.tab]}</main>`;
@@ -438,8 +440,8 @@ function studentsView(){
   const list=state.students.filter(s=>!ui.stuBus||s.busId===ui.stuBus);
   return `<div class="row sb no-print" style="margin-bottom:12px"><h2 style="margin:0">الطلاب (${list.length})</h2>
     <div class="row inline"><select data-chg="stuBus"><option value="">كل الباصات</option>${state.buses.map(b=>`<option value="${b.id}" ${ui.stuBus===b.id?'selected':''}>${esc(busFull(b))}</option>`).join('')}</select>
-    ${isHead()?`<button class="btn pri" data-act="addstu">+ إضافة طالب</button><button class="btn" data-act="importstu">استيراد من Excel</button><button class="btn" data-act="templ">تنزيل نموذج الاستيراد</button>`:''}</div></div>
-  <div class="card scroll">${list.length?`<table><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>الباص</th><th>الحي</th><th>ولي الأمر</th><th>الجوال (واتساب)</th>${isHead()?'<th></th>':''}</tr>${list.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(busOf(s.busId)?.number||'—')}</td><td>${esc(s.hood||'')}</td><td>${esc(s.parent||'')}</td><td>${phoneCell(s,'',today(),'')}</td>${isHead()?`<td style="white-space:nowrap"><button class="btn sm" data-act="editstu" data-id="${s.id}">تعديل</button> <button class="btn sm danger" data-act="delstu" data-id="${s.id}">حذف</button></td>`:''}</tr>`).join('')}</table>`:'<div class="empty">لا يوجد طلاب بعد. أضيفي طالبًا أو استوردي ملف Excel.</div>'}</div>`;
+    ${isAdmin()?`<button class="btn pri" data-act="addstu">+ إضافة طالب</button><button class="btn" data-act="importstu">استيراد من Excel</button><button class="btn" data-act="templ">تنزيل نموذج الاستيراد</button>`:''}</div></div>
+  <div class="card scroll">${list.length?`<table><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>الباص</th><th>الحي</th><th>ولي الأمر</th><th>الجوال (واتساب)</th>${isAdmin()?'<th></th>':''}</tr>${list.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(busOf(s.busId)?.number||'—')}</td><td>${esc(s.hood||'')}</td><td>${esc(s.parent||'')}</td><td>${phoneCell(s,'',today(),'')}</td>${isAdmin()?`<td style="white-space:nowrap"><button class="btn sm" data-act="editstu" data-id="${s.id}">تعديل</button> <button class="btn sm danger" data-act="delstu" data-id="${s.id}">حذف</button></td>`:''}</tr>`).join('')}</table>`:'<div class="empty">لا يوجد طلاب بعد. أضيفي طالبًا أو استوردي ملف Excel.</div>'}</div>`;
 }
 
 /* ---- الباصات والسائقون ---- */
@@ -579,7 +581,7 @@ const A={
   edituser:t=>userForm(state.users.find(u=>u.id===t.dataset.id)),
   deluser:t=>{
     const u=state.users.find(x=>x.id===t.dataset.id);
-    if(u.role==='head'&&state.users.filter(x=>x.role==='head').length<2){alert('يجب أن يبقى مستخدم واحد على الأقل بالصلاحية الكاملة.');return}
+    if(u.role==='admin'&&state.users.filter(x=>x.role==='admin').length<2){alert('يجب أن يبقى مستخدم واحد على الأقل بصلاحية الإدارة.');return}
     if(confirm('حذف هذا المستخدم؟')){state.users=state.users.filter(x=>x.id!==u.id);save();if(u.id===ui.uid){ui.uid=null}render()}
   },
   backup:()=>download(new Blob([JSON.stringify(state)],{type:'application/json'}),'نسخة-النقل-'+today()+'.json'),
@@ -645,7 +647,7 @@ function userForm(u){
   openModal(`<h3>${u.id?'تعديل مستخدم':'إضافة مستخدم'}</h3>
   ${fld('u_name','الاسم',u.name)}
   ${fld('u_phone','الجوال',u.phone,'inputmode="tel" dir="ltr"')}
-  <div class="field"><label>الصلاحية</label><select id="u_role"><option value="head" ${u.role==='head'?'selected':''}>${ROLE.head} — تسجيل وتعديل</option><option value="admin" ${u.role==='admin'?'selected':''}>${ROLE.admin} — بدون تعديل</option></select></div>
+  <div class="field"><label>الصلاحية</label><select id="u_role"><option value="head" ${u.role==='head'?'selected':''}>المشرفة — تسجيل الحضور والتأخير فقط</option><option value="admin" ${u.role==='admin'?'selected':''}>الإدارة — التقارير والإحصائيات والاستيراد والإعدادات</option></select></div>
   ${fld('u_pin','الرقم السري',u.pin,'inputmode="numeric"')}
   <div class="row"><button class="btn pri" id="fsave">حفظ</button><button class="btn" data-act="close">إلغاء</button></div>`);
   $('#fsave').onclick=()=>{
@@ -653,7 +655,7 @@ function userForm(u){
     if(!name||!pin){toast('الاسم والرقم السري مطلوبان');return}
     const o={name,phone:$('#u_phone').value.trim(),role:$('#u_role').value,pin};
     if(u.id){
-      if(u.role==='head'&&o.role!=='head'&&state.users.filter(x=>x.role==='head').length<2){alert('يجب أن يبقى مستخدم واحد على الأقل بالصلاحية الكاملة.');return}
+      if(u.role==='admin'&&o.role!=='admin'&&state.users.filter(x=>x.role==='admin').length<2){alert('يجب أن يبقى مستخدم واحد على الأقل بصلاحية الإدارة.');return}
       Object.assign(state.users.find(x=>x.id===u.id),o);
     }else state.users.push({id:uid(),...o});
     save();closeModal();render();toast('تم الحفظ ✓');
