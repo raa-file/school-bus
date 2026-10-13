@@ -147,14 +147,16 @@ const DEF_TPL={
   L:'السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ـة {الطالب}،\nنفيدكم بتأخر الطالب/ـة عن رحلة {الرحلة} في {الباص} يوم {التاريخ}.\nنأمل الحرص على الالتزام بموعد الباص، شاكرين تعاونكم.\nإدارة النقل المدرسي - {المدرسة}',
   G:'السلام عليكم ورحمة الله وبركاته،\nولي أمر الطالب/ـة {الطالب}،\nتحية طيبة من إدارة النقل المدرسي - {المدرسة} ({الباص}).'
 };
+/* اسم المدرسة ثابت — يُغيَّر من هنا فقط */
+const SCHOOL_NAME='النقل المدرسي';
 function defaultState(){
-  return migrate({updated:0,settings:{school:'اسم المدرسة'},
+  return migrate({updated:0,settings:{school:SCHOOL_NAME},
     users:[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:'1234'},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:'4321'}],
     buses:Array.from({length:10},(_,i)=>({id:uid(),number:String(i+1)})),students:[],attendance:{}});
 }
 function migrate(s){
   s.settings=s.settings||{};
-  s.settings.school=s.settings.school||'اسم المدرسة';
+  s.settings.school=SCHOOL_NAME;
   s.settings.cc=s.settings.cc||'966';
   s.settings.tpl=Object.assign({},DEF_TPL,s.settings.tpl||{});
   if(!s.users||!s.users.length){const p=s.settings.pins||{head:'1234',admin:'4321'};s.users=[{id:uid(),name:'مشرفة البرنامج الرئيسية',phone:'',role:'head',pin:p.head},{id:uid(),name:'إدارة المدرسة',phone:'',role:'admin',pin:p.admin}]}
@@ -502,8 +504,7 @@ function buildReport(){
 function settingsView(){
   const T=state.settings.tpl;
   return `<h2>الإعدادات</h2><div class="grid g-2">
-  <div class="card"><h3>المدرسة</h3>
-    <div class="field"><label>اسم المدرسة</label><input id="sSchool" value="${esc(state.settings.school)}"></div>
+  <div class="card"><h3>الواتساب</h3>
     <div class="field"><label>مفتاح الدولة لأرقام الواتساب</label><input id="sCc" dir="ltr" value="${esc(state.settings.cc)}"></div>
     <button class="btn pri" data-act="saveset">حفظ</button></div>
   <div class="card"><h3>المستخدمون وصلاحيات الدخول</h3>
@@ -570,7 +571,7 @@ const A={
     wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,'كشف-النقل-'+ui.pdate+'.xlsx');
   },
   exPdf:()=>{toast('اختاري «حفظ كـ PDF» من نافذة الطباعة');setTimeout(print,600)},
-  saveset:()=>{state.settings.school=$('#sSchool').value.trim()||'اسم المدرسة';state.settings.cc=($('#sCc').value.replace(/\D/g,''))||'966';save();render();toast('تم الحفظ ✓')},
+  saveset:()=>{state.settings.cc=($('#sCc').value.replace(/\D/g,''))||'966';save();render();toast('تم الحفظ ✓')},
   savetpl:()=>{state.settings.tpl={A:$('#tA').value,L:$('#tL').value,G:$('#tG').value};save();toast('تم الحفظ ✓')},
   restpl:()=>{if(confirm('استعادة النصوص الافتراضية؟')){state.settings.tpl={...DEF_TPL};save();render()}},
   adduser:()=>userForm(),
