@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root{
   --ink:#14213d; --ink2:#5b6478; --line:#e3e7ee; --bg:#f5f7fa; --card:#fff;
@@ -490,6 +491,43 @@ function reportsView(){
 function infoRow(b,cols){
   return `<tr><th colspan="${cols}" style="text-align:right">${esc(busFull(b))} | السائق: ${esc(b.driver||'—')}${b.driverPhone?' ('+esc(b.driverPhone)+')':''} | المشرفة: ${esc(b.supervisor||'—')}${b.supPhone?' ('+esc(b.supPhone)+')':''}${b.hoods?' | الأحياء: '+esc(b.hoods):''}</th></tr>`;
 }
+/* ===================== تصدير Word (docx حقيقي) ===================== */
+function exportDocx(){
+  const X=t=>(t==null?'':String(t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  const para=(txt,o={})=>`<w:p><w:pPr><w:bidi/><w:jc w:val="${o.align||'right'}"/>${o.sb?'<w:spacing w:before="'+o.sb+'"/>':''}</w:pPr><w:r><w:rPr><w:rtl/>${o.b?'<w:b/>':''}${o.sz?'<w:sz w:val="'+(o.sz*2)+'"/>':''}${o.color?'<w:color w:val="'+o.color+'"/>':''}</w:rPr><w:t xml:space="preserve">${X(txt)}</w:t></w:r></w:p>`;
+  const BORD=['top','left','bottom','right','insideH','insideV'].map(e=>`<w:${e} w:val="single" w:sz="4" w:space="0" w:color="888888"/>`).join('');
+  function tableXml(tb){
+    const rows=[...tb.rows].map(r=>[...r.cells].map(c=>({t:c.textContent.trim(),h:c.tagName==='TH',s:c.colSpan||1})));
+    let max=0;rows.forEach(r=>{let n=0;r.forEach(c=>n+=c.s);if(n>max)max=n});
+    const grid='<w:tblGrid>'+Array.from({length:max},()=>'<w:gridCol w:w="'+Math.floor(9000/max)+'"/>').join('')+'</w:tblGrid>';
+    const body=rows.map(r=>'<w:tr>'+r.map(c=>`<w:tc><w:tcPr>${c.s>1?'<w:gridSpan w:val="'+c.s+'"/>':''}${c.h?'<w:shd w:val="clear" w:fill="EEEEEE"/>':''}<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:bidi/><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rtl/>${c.h?'<w:b/>':''}<w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${X(c.t)}</w:t></w:r></w:p></w:tc>`).join('')+'</w:tr>').join('');
+    return `<w:tbl><w:tblPr><w:bidiVisual/><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${BORD}</w:tblBorders></w:tblPr>${grid}${body}</w:tbl>`;
+  }
+  let body='';
+  (function walk(node){
+    node.childNodes.forEach(n=>{
+      if(n.nodeType!==1)return;
+      const tag=n.tagName;
+      if(tag==='IMG')return;
+      else if(tag==='H1')body+=para(n.textContent.trim(),{b:true,sz:16,align:'center'});
+      else if(tag==='H2')body+=para(n.textContent.trim(),{b:true,sz:12,align:'center'});
+      else if(tag==='H3')body+=para(n.textContent.trim(),{b:true,sz:11});
+      else if(n.classList&&n.classList.contains('note'))body+=para(n.textContent.trim(),{sz:9,align:'center',color:'666666'});
+      else if(tag==='TABLE'){body+=tableXml(n);body+=para('',{sz:6});}
+      else walk(n);
+    });
+  })($('#sheet'));
+  const doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+body+'<w:sectPr><w:bidi/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720"/></w:sectPr></w:body></w:document>';
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+  const zip=new JSZip();
+  zip.file('[Content_Types].xml',ct);
+  zip.folder('_rels').file('.rels',rels);
+  zip.folder('word').file('document.xml',doc);
+  zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}).then(blob=>{
+    download(blob,'كشف-النقل-'+ui.pdate+'.docx');
+  });
+}
 function buildReport(){
   const k=ui.repType,tr=ui.rTrip,b=ui.repBus?busOf(ui.repBus):null;
   const head=state.users.find(u=>u.role==='head');
@@ -588,7 +626,7 @@ const A={
   delbus:t=>{const id=t.dataset.id;if(stuOf(id).length){alert('انقلي طلاب هذا الباص إلى باص آخر أولًا.');return}if(confirm('حذف هذا الباص؟')){state.buses=state.buses.filter(b=>b.id!==id);save();render()}},
   importstu:()=>pickFile('.xlsx,.xls,.csv',importExcel),
   templ:()=>{const ws=XLSX.utils.aoa_to_sheet([['اسم الطالب','المرحلة','الفصل','الحي','رقم الباص','اسم الباص','السائق','جوال السائق','المشرفة','جوال المشرفة','ولي الأمر','جوال ولي الأمر'],['سارة محمد','الأول المتوسط','2','النزهة','1','باص الفجر','عبدالله','0500000000','أم محمد','0500000001','محمد','0500000002']]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الطلاب');wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,'نموذج-استيراد-الطلاب.xlsx')},
-  exWord:()=>{const c=$('#sheet').cloneNode(true);c.querySelectorAll('img').forEach(im=>im.remove());const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{direction:rtl;font-family:Arial}h1,h2{text-align:center}table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:4px;text-align:right}th{background:#eee}</style></head><body dir="rtl">${c.innerHTML}</body></html>`;download(new Blob(['\ufeff',html],{type:'application/msword'}),'كشف-النقل-'+ui.pdate+'.doc')},
+  exWord:()=>{try{exportDocx()}catch(e){alert('تعذّر إنشاء ملف Word')}},
   exXlsx:()=>{
     const wb=XLSX.utils.book_new(),used=new Set();
     $('#sheet').querySelectorAll('table').forEach((tb,i)=>{
