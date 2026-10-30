@@ -280,6 +280,10 @@ const isHead=()=>{const u=me();return !!u&&(u.role==='head'||u.role==='owner')};
 const isAdmin=()=>{const u=me();return !!u&&(u.role==='admin'||u.role==='owner')};
 const busOf=id=>state.buses.find(b=>b.id===id);
 const stuOf=id=>state.students.filter(s=>s.busId===id);
+const RIDE={both:'ذهاب وعودة',go:'ذهاب فقط',back:'عودة فقط'};
+const rideOf=s=>s.ride||'both';
+const inTrip=(s,tr)=>!tr||rideOf(s)==='both'||rideOf(s)===tr;
+const stuTrip=(id,tr)=>stuOf(id).filter(s=>inTrip(s,tr));
 const busTitle=b=>b?(b.name||('باص رقم '+b.number)):'';
 const busFull=b=>b?('باص رقم '+b.number+(b.name?' ('+b.name+')':'')):'';
 const att=(d,t)=>((state.attendance[d]||{})[t])||{};
@@ -394,7 +398,7 @@ function busesView(){
 /* ---- تسجيل الحضور ---- */
 function attView(){
   const b=busOf(ui.busId);if(!b){ui.busId=null;return busesView()}
-  const list=stuOf(b.id),day=att(ui.date,ui.trip);
+  const list=stuTrip(b.id,ui.trip),day=att(ui.date,ui.trip);
   const c={P:0,A:0,L:0};list.forEach(s=>day[s.id]&&c[day[s.id]]++);
   const dis=isHead()?'':'disabled';
   const tel=(n,p)=>n?esc(n)+(p?' <a href="tel:'+esc(p)+'">'+esc(p)+'</a>':''):'—';
@@ -465,7 +469,7 @@ function studentsView(){
   return `<div class="row sb no-print" style="margin-bottom:12px"><h2 style="margin:0">الطلاب (${list.length})</h2>
     <div class="row inline"><select data-chg="stuBus"><option value="">كل الباصات</option>${state.buses.map(b=>`<option value="${b.id}" ${ui.stuBus===b.id?'selected':''}>${esc(busFull(b))}</option>`).join('')}</select>
     ${isAdmin()?`<button class="btn pri" data-act="addstu">+ إضافة طالب</button><button class="btn" data-act="importstu">استيراد من Excel</button><button class="btn" data-act="templ">تنزيل نموذج الاستيراد</button>`:''}</div></div>
-  <div class="card scroll">${list.length?`<table><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>الباص</th><th>الحي</th><th>ولي الأمر</th><th>الجوال (واتساب)</th>${isAdmin()?'<th></th>':''}</tr>${list.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(busOf(s.busId)?.number||'—')}</td><td>${esc(s.hood||'')}</td><td>${esc(s.parent||'')}</td><td>${phoneCell(s,'',today(),'')}</td>${isAdmin()?`<td style="white-space:nowrap"><button class="btn sm" data-act="editstu" data-id="${s.id}">تعديل</button> <button class="btn sm danger" data-act="delstu" data-id="${s.id}">حذف</button></td>`:''}</tr>`).join('')}</table>`:'<div class="empty">لا يوجد طلاب بعد. أضيفي طالبًا أو استوردي ملف Excel.</div>'}</div>`;
+  <div class="card scroll">${list.length?`<table><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>الباص</th><th>نوع التنقل</th><th>الحي</th><th>ولي الأمر</th><th>الجوال (واتساب)</th>${isAdmin()?'<th></th>':''}</tr>${list.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(busOf(s.busId)?.number||'—')}</td><td>${RIDE[rideOf(s)]}</td><td>${esc(s.hood||'')}</td><td>${esc(s.parent||'')}</td><td>${phoneCell(s,'',today(),'')}</td>${isAdmin()?`<td style="white-space:nowrap"><button class="btn sm" data-act="editstu" data-id="${s.id}">تعديل</button> <button class="btn sm danger" data-act="delstu" data-id="${s.id}">حذف</button></td>`:''}</tr>`).join('')}</table>`:'<div class="empty">لا يوجد طلاب بعد. أضيفي طالبًا أو استوردي ملف Excel.</div>'}</div>`;
 }
 
 /* ---- الباصات والسائقون ---- */
@@ -548,7 +552,7 @@ function buildReport(){
   }else if(k==='sheet'){
     const cols=tr?8:9;
     buses.forEach((x,i)=>{
-      h+=`<div style="margin-top:14px;${i<buses.length-1?'page-break-after:always;break-after:page':''}"><table data-name="باص ${esc(x.number)}">${infoRow(x,cols)}<tr><th>م</th><th>اسم الطالب</th><th>المرحلة</th><th>الفصل</th><th>الحي</th><th>جوال ولي الأمر</th>${tr?`<th>${TRIP[tr]}</th>`:'<th>الذهاب</th><th>العودة</th>'}<th>ملاحظات</th></tr>${stuOf(x.id).map((s,j)=>{
+      h+=`<div style="margin-top:14px;${i<buses.length-1?'page-break-after:always;break-after:page':''}"><table data-name="باص ${esc(x.number)}">${infoRow(x,cols)}<tr><th>م</th><th>اسم الطالب</th><th>المرحلة</th><th>الفصل</th><th>الحي</th><th>جوال ولي الأمر</th>${tr?`<th>${TRIP[tr]}</th>`:'<th>الذهاب</th><th>العودة</th>'}<th>ملاحظات</th></tr>${stuTrip(x.id,tr).map((s,j)=>{
         const g=ST[att(ui.pdate,'go')[s.id]]||'',r=ST[att(ui.pdate,'back')[s.id]]||'';
         return `<tr><td>${j+1}</td><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(s.hood||'')}</td><td>${esc(s.phone||'')}</td>${tr?`<td>${tr==='go'?g:r}</td>`:`<td>${g}</td><td>${r}</td>`}<td></td></tr>`}).join('')||`<tr><td colspan="${cols}">لا يوجد طلاب</td></tr>`}</table></div>`;
     });
@@ -610,7 +614,7 @@ const A={
     if(v)day[id]=v;else delete day[id];
     save({ops:[{d,t:ui.trip,s:id,v}]});const y=scrollY;render();scrollTo(0,y);toast('تم الحفظ ✓');
   },
-  allP:()=>{const d=ui.date;state.attendance[d]=state.attendance[d]||{go:{},back:{}};const day=state.attendance[d][ui.trip]=state.attendance[d][ui.trip]||{};const ops=[];stuOf(ui.busId).forEach(s=>{if(!day[s.id]){day[s.id]='P';ops.push({d,t:ui.trip,s:s.id,v:'P'})}});save({ops});render();toast('تم الحفظ ✓')},
+  allP:()=>{const d=ui.date;state.attendance[d]=state.attendance[d]||{go:{},back:{}};const day=state.attendance[d][ui.trip]=state.attendance[d][ui.trip]||{};const ops=[];stuTrip(ui.busId,ui.trip).forEach(s=>{if(!day[s.id]){day[s.id]='P';ops.push({d,t:ui.trip,s:s.id,v:'P'})}});save({ops});render();toast('تم الحفظ ✓')},
   msgs:()=>{
     const day=att(ui.date,ui.trip),l=stuOf(ui.busId).filter(s=>day[s.id]==='A'||day[s.id]==='L');
     if(!l.length){toast('لا يوجد غائبون أو متأخرون');return}
@@ -625,7 +629,7 @@ const A={
   editbus:t=>busForm(busOf(t.dataset.id)),
   delbus:t=>{const id=t.dataset.id;if(stuOf(id).length){alert('انقلي طلاب هذا الباص إلى باص آخر أولًا.');return}if(confirm('حذف هذا الباص؟')){state.buses=state.buses.filter(b=>b.id!==id);save();render()}},
   importstu:()=>pickFile('.xlsx,.xls,.csv',importExcel),
-  templ:()=>{const ws=XLSX.utils.aoa_to_sheet([['اسم الطالب','المرحلة','الفصل','الحي','رقم الباص','اسم الباص','السائق','جوال السائق','المشرفة','جوال المشرفة','ولي الأمر','جوال ولي الأمر'],['سارة محمد','الأول المتوسط','2','النزهة','1','باص الفجر','عبدالله','0500000000','أم محمد','0500000001','محمد','0500000002']]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الطلاب');wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,'نموذج-استيراد-الطلاب.xlsx')},
+  templ:()=>{const ws=XLSX.utils.aoa_to_sheet([['اسم الطالب','المرحلة','الفصل','نوع التنقل','الحي','رقم الباص','اسم الباص','السائق','جوال السائق','المشرفة','جوال المشرفة','ولي الأمر','جوال ولي الأمر'],['سارة محمد','الأول المتوسط','2','ذهاب وعودة','النزهة','1','باص الفجر','عبدالله','0500000000','أم محمد','0500000001','محمد','0500000002']]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'الطلاب');wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,'نموذج-استيراد-الطلاب.xlsx')},
   exWord:()=>{try{exportDocx()}catch(e){alert('تعذّر إنشاء ملف Word')}},
   exXlsx:()=>{
     const wb=XLSX.utils.book_new(),used=new Set();
@@ -676,13 +680,14 @@ function stuForm(s){
   ${fld('f_stage','المرحلة الدراسية (مثال: الثاني المتوسط)',s.stage)}
   ${fld('f_cls','اسم الفصل (مثال: 3 أو ب)',s.cls)}
   <div class="field"><label>الباص</label><select id="f_bus">${state.buses.map(b=>`<option value="${b.id}" ${b.id===s.busId?'selected':''}>${esc(busFull(b))}</option>`).join('')}</select></div>
+  <div class="field"><label>نوع التنقل</label><select id="f_ride">${Object.keys(RIDE).map(k=>`<option value="${k}" ${rideOf(s)===k?'selected':''}>${RIDE[k]}</option>`).join('')}</select></div>
   ${fld('f_hood','الحي',s.hood)}
   ${fld('f_parent','اسم ولي الأمر',s.parent)}
   ${fld('f_phone','جوال ولي الأمر',s.phone,'inputmode="tel" dir="ltr"')}
   <div class="row"><button class="btn pri" id="fsave">حفظ</button><button class="btn" data-act="close">إلغاء</button></div>`);
   $('#fsave').onclick=()=>{
     const name=$('#f_name').value.trim();if(!name){toast('اكتبي اسم الطالب');return}
-    const o={name,stage:$('#f_stage').value.trim(),cls:$('#f_cls').value.trim(),busId:$('#f_bus').value,hood:$('#f_hood').value.trim(),parent:$('#f_parent').value.trim(),phone:$('#f_phone').value.trim()};
+    const o={name,stage:$('#f_stage').value.trim(),cls:$('#f_cls').value.trim(),busId:$('#f_bus').value,ride:$('#f_ride').value,hood:$('#f_hood').value.trim(),parent:$('#f_parent').value.trim(),phone:$('#f_phone').value.trim()};
     if(s.id)Object.assign(state.students.find(x=>x.id===s.id),o);else state.students.push({id:uid(),...o});
     save();closeModal();render();toast('تم الحفظ ✓');
   };
@@ -745,7 +750,7 @@ function importExcel(f){
         const fill=(k,v)=>{if(bus&&v&&!bus[k])bus[k]=v};
         fill('name',pick(x,['اسم الباص']));fill('driver',pick(x,['السائق','اسم السائق']));fill('driverPhone',fixPhone(pick(x,['جوال السائق'])));
         fill('supervisor',pick(x,['المشرفة','اسم المشرفة']));fill('supPhone',fixPhone(pick(x,['جوال المشرفة'])));
-        state.students.push({id:uid(),name,stage:pick(x,['المرحلة','المرحلة الدراسية','الصف']),cls:pick(x,['الفصل','اسم الفصل']),busId:bus.id,hood:pick(x,['الحي','العنوان']),parent:pick(x,['ولي الأمر','اسم ولي الأمر']),phone:fixPhone(pick(x,['جوال ولي الأمر','الجوال','رقم ولي الأمر']))});n++;
+        state.students.push({id:uid(),name,stage:pick(x,['المرحلة','المرحلة الدراسية','الصف']),cls:pick(x,['الفصل','اسم الفصل']),busId:bus.id,ride:(v=>{const t=(v||'').replace(/\s/g,'');return t.includes('ذهابو')||t.includes('كليهما')||t.includes('الاثنين')?'both':t==='ذهاب'||t==='ذهابفقط'?'go':t==='عودة'||t==='عودةفقط'?'back':'both'})(pick(x,['نوع التنقل','التنقل','الرحلة'])),hood:pick(x,['الحي','العنوان']),parent:pick(x,['ولي الأمر','اسم ولي الأمر']),phone:fixPhone(pick(x,['جوال ولي الأمر','الجوال','رقم ولي الأمر']))});n++;
       });
       save();render();toast('تم استيراد '+n+' طالب');
     }catch(e){alert('تعذّرت قراءة الملف')}
