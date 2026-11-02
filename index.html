@@ -14,7 +14,7 @@
 :root{
   --ink:#14213d; --ink2:#5b6478; --line:#e3e7ee; --bg:#f5f7fa; --card:#fff;
   --bus:#f7b801; --busink:#1a1400;
-  --ok:#1f9d63; --okbg:#e6f6ee; --bad:#d6403a; --badbg:#fdeceb; --late:#e08a00; --latebg:#fff3dc;
+  --ok:#1f9d63; --okbg:#e6f6ee; --bad:#d6403a; --badbg:#fdeceb; --late:#e08a00; --latebg:#fff3dc; --exc:#2563c9; --excbg:#e8f0fd;
   --r:12px;
 }
 *{box-sizing:border-box}
@@ -50,7 +50,7 @@ h3{margin:0 0 10px;font-size:17px}
 .bar i{display:block;height:100%;background:var(--ok)}
 .kpi .n{font-size:30px;font-weight:700;line-height:1.2}
 .kpi .l{color:var(--ink2);font-size:13px}
-.kpi.ok .n{color:var(--ok)}.kpi.bad .n{color:var(--bad)}.kpi.late .n{color:var(--late)}
+.kpi.ok .n{color:var(--ok)}.kpi.bad .n{color:var(--bad)}.kpi.late .n{color:var(--late)}.kpi.exc .n{color:var(--exc)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .row.sb{justify-content:space-between}
 .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 14px;font-weight:500}
@@ -73,14 +73,15 @@ label{display:block;font-size:13px;color:var(--ink2);margin-bottom:4px}
 .stu .nm b{display:block}
 .stu .nm span{color:var(--ink2);font-size:13px}
 .stu a{color:var(--ink);text-decoration:none;font-size:14px;direction:ltr;unicode-bidi:embed}
-.mk{display:flex;gap:6px}
-.mk button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 14px;font-weight:600;min-width:72px}
+.mk{display:flex;gap:6px;flex-wrap:wrap}
+.mk button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;font-weight:600;min-width:64px;flex:1 1 auto}
 .mk button.P.on{background:var(--ok);color:#fff;border-color:var(--ok)}
 .mk button.A.on{background:var(--bad);color:#fff;border-color:var(--bad)}
 .mk button.L.on{background:var(--late);color:#fff;border-color:var(--late)}
+.mk button.E.on{background:var(--exc);color:#fff;border-color:var(--exc)}
 .mk button:disabled{opacity:.6;cursor:default}
 .chip{display:inline-block;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:600}
-.chip.P{background:var(--okbg);color:var(--ok)}.chip.A{background:var(--badbg);color:var(--bad)}.chip.L{background:var(--latebg);color:var(--late)}
+.chip.P{background:var(--okbg);color:var(--ok)}.chip.A{background:var(--badbg);color:var(--bad)}.chip.L{background:var(--latebg);color:var(--late)}.chip.E{background:var(--excbg);color:var(--exc)}
 table{border-collapse:collapse;width:100%}
 th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:start;font-size:14px}
 th{background:#f0f3f8;font-weight:600}
@@ -138,7 +139,7 @@ const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const today=()=>fmt(new Date());
 const pct=(a,b)=>b?Math.round(a/b*100):0;
-const ST={P:'حاضر',A:'غائب',L:'متأخر'};
+const ST={P:'حاضر',A:'غائب',L:'متأخر',E:'مُستأذن'};
 const TRIP={go:'الذهاب',back:'العودة'};
 const ROLE={head:'المشرفة',admin:'الإدارة'};
 
@@ -327,23 +328,23 @@ function periodLabel(period,ds){
 function stats(dates,busId,trip){
   const ids=new Set(state.students.filter(s=>!busId||s.busId===busId).map(s=>s.id));
   const stuMap=Object.fromEntries(state.students.map(s=>[s.id,s]));
-  const t={P:0,A:0,L:0},byBus={},byDate={},byStu={},rows=[];
-  state.buses.forEach(b=>byBus[b.id]={P:0,A:0,L:0});
+  const t={P:0,A:0,L:0,E:0},byBus={},byDate={},byStu={},rows=[];
+  state.buses.forEach(b=>byBus[b.id]={P:0,A:0,L:0,E:0});
   const trips=trip?[trip]:['go','back'];
   dates.forEach(d=>{
-    byDate[d]={P:0,A:0,L:0};
+    byDate[d]={P:0,A:0,L:0,E:0};
     trips.forEach(tr=>{
       const day=att(d,tr);
       for(const sid in day){
         if(!ids.has(sid))continue;const s=stuMap[sid],st=day[sid];
         t[st]++;byDate[d][st]++;
         if(byBus[s.busId])byBus[s.busId][st]++;
-        (byStu[sid]=byStu[sid]||{P:0,A:0,L:0})[st]++;
+        (byStu[sid]=byStu[sid]||{P:0,A:0,L:0,E:0})[st]++;
         rows.push({date:d,trip:tr,s,st});
       }
     });
   });
-  return {t,byBus,byDate,byStu,rows,total:t.P+t.A+t.L};
+  return {t,byBus,byDate,byStu,rows,total:t.P+t.A+t.L+t.E};
 }
 const recordedOn=(busId,d,tr)=>{const day=att(d,tr);return stuOf(busId).filter(s=>day[s.id]).length};
 
@@ -404,7 +405,7 @@ function busesView(){
 function attView(){
   const b=busOf(ui.busId);if(!b){ui.busId=null;return busesView()}
   const list=stuTrip(b.id,ui.trip),day=att(ui.date,ui.trip);
-  const c={P:0,A:0,L:0};list.forEach(s=>day[s.id]&&c[day[s.id]]++);
+  const c={P:0,A:0,L:0,E:0};list.forEach(s=>day[s.id]&&c[day[s.id]]++);
   const dis=isHead()?'':'disabled';
   const tel=(n,p)=>n?esc(n)+(p?' <a href="tel:'+esc(p)+'">'+esc(p)+'</a>':''):'—';
   return `<div class="row sb no-print" style="margin-bottom:14px">
@@ -418,13 +419,13 @@ function attView(){
       <div class="note">المشرفة: ${tel(b.supervisor,b.supPhone)}</div>
       <div class="note">السائق: ${tel(b.driver,b.driverPhone)}</div>
       ${b.hoods?`<div class="note">الأحياء: ${esc(b.hoods)}</div>`:''}</div></div>
-      <div class="row"><span class="chip P">حاضر ${c.P}</span><span class="chip A">غائب ${c.A}</span><span class="chip L">متأخر ${c.L}</span>
+      <div class="row"><span class="chip P">حاضر ${c.P}</span><span class="chip A">غائب ${c.A}</span><span class="chip L">متأخر ${c.L}</span><span class="chip E">مُستأذن ${c.E}</span>
       ${isHead()&&list.length?`<button class="btn sm" data-act="allP">الكل حاضر</button>`:''}
       ${list.length?`<button class="btn sm" data-act="msgs">رسائل أولياء الأمور</button>`:''}</div></div></div>
   <div class="card">${list.length?list.map(s=>`<div class="stu">
       <div class="nm"><b>${esc(s.name)}</b><span>${esc(clsText(s))}${s.hood?' · حي '+esc(s.hood):''}</span></div>
       <div><span class="note">${esc(s.parent||'ولي الأمر')}</span><br>${phoneCell(s,day[s.id],ui.date,ui.trip)}</div>
-      <div class="mk">${['P','A','L'].map(k=>`<button ${dis} class="${k} ${day[s.id]===k?'on':''}" data-act="mark" data-id="${s.id}" data-s="${k}">${ST[k]}</button>`).join('')}</div>
+      <div class="mk">${['P','A','L','E'].map(k=>`<button ${dis} class="${k} ${day[s.id]===k?'on':''}" data-act="mark" data-id="${s.id}" data-s="${k}">${ST[k]}</button>`).join('')}</div>
     </div>`).join(''):'<div class="empty">لا يوجد طلاب في هذا الباص بعد. أضيفيهم من تبويب «الطلاب».</div>'}</div>
   <p class="note">يُحفظ كل تسجيل فورًا. اضغطي على رقم ولي الأمر لفتح محادثة واتساب برسالة جاهزة حسب حالة الطالب (غياب أو تأخر).</p>`;
 }
@@ -446,6 +447,7 @@ function dashView(){
     <div class="card kpi ok"><div class="n">${S.t.P}</div><div class="l">حضور</div></div>
     <div class="card kpi bad"><div class="n">${S.t.A}</div><div class="l">غياب</div></div>
     <div class="card kpi late"><div class="n">${S.t.L}</div><div class="l">تأخير</div></div>
+    <div class="card kpi exc"><div class="n">${S.t.E}</div><div class="l">مُستأذن</div></div>
     <div class="card kpi"><div class="n">${pct(S.t.P,S.total)}%</div><div class="l">نسبة الحضور</div></div></div>
   <div class="grid g-2" style="margin-bottom:14px">
     <div class="card"><h3>توزيع الحالات</h3><div style="height:260px"><canvas id="c1"></canvas></div></div>
@@ -461,11 +463,11 @@ function drawCharts(){
   if(!window.Chart)return;
   Chart.defaults.font.family="'IBM Plex Sans Arabic',Tahoma";
   const dates=rangeDates(ui.period,ui.pdate),S=stats(dates,null,ui.dTrip);
-  const col={P:'#1f9d63',A:'#d6403a',L:'#e08a00'};
+  const col={P:'#1f9d63',A:'#d6403a',L:'#e08a00',E:'#2563c9'};
   const opt={responsive:true,maintainAspectRatio:false,plugins:{legend:{rtl:true,labels:{usePointStyle:true}}}};
   const c1=$('#c1');if(c1)charts.push(new Chart(c1,{type:'doughnut',data:{labels:['حاضر','غائب','متأخر'],datasets:[{data:[S.t.P,S.t.A,S.t.L],backgroundColor:[col.P,col.A,col.L],borderWidth:0}]},options:{...opt,cutout:'62%'}}));
-  const c2=$('#c2');if(c2)charts.push(new Chart(c2,{type:'bar',data:{labels:state.buses.map(b=>'باص '+b.number),datasets:['P','A','L'].map(k=>({label:ST[k],data:state.buses.map(b=>S.byBus[b.id][k]),backgroundColor:col[k],borderRadius:3}))},options:{...opt,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}}));
-  const c3=$('#c3');if(c3){const ds=dates.filter(d=>state.attendance[d]);charts.push(new Chart(c3,{type:'line',data:{labels:ds.map(d=>d.slice(5)),datasets:['P','A','L'].map(k=>({label:ST[k],data:ds.map(d=>S.byDate[d][k]),borderColor:col[k],backgroundColor:col[k],tension:.3,pointRadius:3}))},options:{...opt,scales:{y:{beginAtZero:true,ticks:{precision:0}}}}}))}
+  const c2=$('#c2');if(c2)charts.push(new Chart(c2,{type:'bar',data:{labels:state.buses.map(b=>'باص '+b.number),datasets:['P','A','L','E'].map(k=>({label:ST[k],data:state.buses.map(b=>S.byBus[b.id][k]),backgroundColor:col[k],borderRadius:3}))},options:{...opt,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}}}));
+  const c3=$('#c3');if(c3){const ds=dates.filter(d=>state.attendance[d]);charts.push(new Chart(c3,{type:'line',data:{labels:ds.map(d=>d.slice(5)),datasets:['P','A','L','E'].map(k=>({label:ST[k],data:ds.map(d=>S.byDate[d][k]),borderColor:col[k],backgroundColor:col[k],tension:.3,pointRadius:3}))},options:{...opt,scales:{y:{beginAtZero:true,ticks:{precision:0}}}}}))}
 }
 
 /* ---- الطلاب ---- */
@@ -565,7 +567,7 @@ function buildReport(){
     const dates=rangeDates(k,ui.pdate),S=stats(dates,ui.repBus||null,tr);
     h+=`<h4>الملخص</h4><table data-name="الملخص"><tr><th>الحضور</th><th>الغياب</th><th>التأخير</th><th>إجمالي التسجيلات</th><th>نسبة الحضور</th></tr><tr><td>${S.t.P}</td><td>${S.t.A}</td><td>${S.t.L}</td><td>${S.total}</td><td>${pct(S.t.P,S.total)}%</td></tr></table>`;
     if(!b)h+=`<h4>حسب الباص</h4>${busTable(S,'الباصات')}`;
-    else h+=`<h4>حسب الطالب</h4><table data-name="الطلاب"><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>جوال ولي الأمر</th><th>حضور</th><th>غياب</th><th>تأخير</th></tr>${stuOf(b.id).map(s=>{const x=S.byStu[s.id]||{P:0,A:0,L:0};return `<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(s.phone||'')}</td><td>${x.P}</td><td>${x.A}</td><td>${x.L}</td></tr>`}).join('')}</table>`;
+    else h+=`<h4>حسب الطالب</h4><table data-name="الطلاب"><tr><th>الطالب</th><th>المرحلة</th><th>الفصل</th><th>جوال ولي الأمر</th><th>حضور</th><th>غياب</th><th>تأخير</th><th>مُستأذن</th></tr>${stuOf(b.id).map(s=>{const x=S.byStu[s.id]||{P:0,A:0,L:0,E:0};return `<tr><td>${esc(s.name)}</td><td>${esc(s.stage||'')}</td><td>${esc(s.cls||'')}</td><td>${esc(s.phone||'')}</td><td>${x.P}</td><td>${x.A}</td><td>${x.L}</td><td>${x.E}</td></tr>`}).join('')}</table>`;
     const lst=S.rows.filter(r=>r.st!=='P').sort((a,c)=>a.date<c.date?-1:a.date>c.date?1:0);
     h+=`<h4>الغائبون والمتأخرون</h4>`+(lst.length?`<table data-name="الغياب والتأخير"><tr><th>التاريخ</th><th>الرحلة</th><th>الطالب</th><th>الفصل</th><th>الباص</th><th>الحالة</th><th>ولي الأمر</th><th>الجوال</th></tr>${lst.map(r=>`<tr><td>${both(r.date)}</td><td>${TRIP[r.trip]}</td><td>${esc(r.s.name)}</td><td>${esc(clsText(r.s))}</td><td>${esc(busOf(r.s.busId)?.number||'')}</td><td>${ST[r.st]}</td><td>${esc(r.s.parent||'')}</td><td>${esc(r.s.phone||'')}</td></tr>`).join('')}</table>`:'<p>لا توجد حالات غياب أو تأخير.</p>');
   }
